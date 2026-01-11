@@ -4,14 +4,14 @@ import { KanbanBoard } from '@/components/kanban'
 import { AIProjectReport } from '@/components/ai'
 import Link from 'next/link'
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   onboarding: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
   active: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   paused: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   completed: 'bg-stardust-400/20 text-stardust-300 border-stardust-400/30',
 }
 
-const updateTypeIcons = {
+const updateTypeIcons: Record<string, string> = {
   milestone: '🎯',
   blocker: '🚧',
   delivery: '📦',

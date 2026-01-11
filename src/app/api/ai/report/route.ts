@@ -120,5 +120,5 @@ Generate a professional status report for the client based on this data.`
     prompt: 'Generate the executive status report for this project.',
   })
 
-  return result.toDataStreamResponse()
+  return result.toTextStreamResponse()
 }

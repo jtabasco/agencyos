@@ -168,7 +168,7 @@ export default async function TasksPage() {
             <span className="cursor-pointer rounded-full bg-cosmic-500/20 px-3 py-1 text-sm font-medium text-cosmic-400">
               All Projects
             </span>
-            {projects.map((project: Project) => (
+            {projects.map((project: { id: string; name: string }) => (
               <Link
                 key={project.id}
                 href={`/projects/${project.id}`}

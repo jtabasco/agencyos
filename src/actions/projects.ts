@@ -1,15 +1,16 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { ProjectStatus } from '@/types/database'
 
-export async function createProject(formData: FormData) {
+export async function createProject(formData: FormData): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return { error: 'Not authenticated' }
+    redirect('/login')
   }
 
   const name = formData.get('name') as string
@@ -25,7 +26,7 @@ export async function createProject(formData: FormData) {
 
   // Only owner and pm can create projects
   if (!profile || (profile.role !== 'owner' && profile.role !== 'pm')) {
-    return { error: 'Not authorized to create projects' }
+    redirect('/projects?error=not_authorized')
   }
 
   const { data: project, error } = await supabase
@@ -41,12 +42,13 @@ export async function createProject(formData: FormData) {
     .single()
 
   if (error) {
-    return { error: error.message }
+    console.error('Error creating project:', error.message)
+    redirect('/projects?error=project_creation_failed')
   }
 
   revalidatePath('/projects')
   revalidatePath('/dashboard')
-  return { success: true, project }
+  redirect(`/projects/${project.id}`)
 }
 
 export async function updateProject(projectId: string, formData: FormData) {

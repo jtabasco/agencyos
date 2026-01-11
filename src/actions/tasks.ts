@@ -5,12 +5,12 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { TaskStatus } from '@/types/database'
 
-export async function createTask(formData: FormData) {
+export async function createTask(formData: FormData): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return { error: 'Not authenticated' }
+    redirect('/login')
   }
 
   const projectId = formData.get('project_id') as string
@@ -31,7 +31,8 @@ export async function createTask(formData: FormData) {
     })
 
   if (error) {
-    return { error: error.message }
+    console.error('Error creating task:', error.message)
+    redirect(`/projects/${projectId}?error=task_creation_failed`)
   }
 
   revalidatePath('/projects')
