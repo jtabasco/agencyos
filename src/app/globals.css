@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design System: Deep Space Purple
+ * Negro profundo con tonalidades moradas espaciales
+ */
+
+:root {
+  /* Deep Space Colors */
+  --color-space-950: #030014;
+  --color-space-900: #0a0520;
+  --color-space-800: #110a2e;
+  --color-space-700: #1a1040;
+
+  /* Cosmic Purple */
+  --color-cosmic-500: #7c3aed;
+  --color-cosmic-400: #8b5cf6;
+  --color-cosmic-300: #a78bfa;
+  --color-cosmic-200: #c4b5fd;
+
+  /* Nebula Accent */
+  --color-nebula-500: #a855f7;
+  --color-nebula-400: #c084fc;
+  --color-nebula-300: #d8b4fe;
+
+  /* Stardust (for text) */
+  --color-stardust-100: #f5f3ff;
+  --color-stardust-200: #ede9fe;
+  --color-stardust-300: #ddd6fe;
+  --color-stardust-400: #a1a1aa;
+
+  /* Status Colors */
+  --color-success: #10b981;
+  --color-error: #ef4444;
+  --color-warning: #f59e0b;
+}
+
+/* Base styles */
+body {
+  background-color: var(--color-space-950);
+  color: var(--color-stardust-100);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-space-900);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-cosmic-500);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-cosmic-400);
+}
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid var(--color-cosmic-400);
+  outline-offset: 2px;
+}
+
+/* Animation for blob floating */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
