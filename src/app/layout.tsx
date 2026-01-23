@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'SaaS Factory App',
-  description: 'Built with SaaS Factory',
+  title: 'AgencyOS',
+  description: 'Agency management platform with AI-powered reports',
 }
 
 export default function RootLayout({
