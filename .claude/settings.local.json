@@ -24,7 +24,9 @@
       "Bash(node:*)",
       "Bash(npm install:*)",
       "Bash(git add:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(taskkill:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

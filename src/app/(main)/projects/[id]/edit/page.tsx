@@ -140,22 +140,6 @@ export default async function EditProjectPage({
           </select>
         </div>
 
-        {/* Progress Percent */}
-        <div>
-          <label htmlFor="progress_percent" className="block text-sm font-medium text-stardust-200">
-            Progress ({project.progress_percent}%)
-          </label>
-          <input
-            type="range"
-            id="progress_percent"
-            name="progress_percent"
-            min="0"
-            max="100"
-            defaultValue={project.progress_percent}
-            className="mt-2 block w-full"
-          />
-        </div>
-
         {/* Client Selection */}
         <div>
           <label htmlFor="client_id" className="block text-sm font-medium text-stardust-200">

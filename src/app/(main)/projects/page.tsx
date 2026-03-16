@@ -8,6 +8,7 @@ const statusColors = {
   active: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   paused: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   completed: 'bg-stardust-400/20 text-stardust-300 border-stardust-400/30',
+  cancelled: 'bg-red-500/20 text-red-300 border-red-500/30',
 }
 
 export default async function ProjectsPage() {
@@ -165,7 +166,9 @@ function ProjectsPageContent({
             <Link
               key={project.id}
               href={`/projects/${project.id}`}
-              className="group rounded-2xl border border-space-700/50 bg-space-900/50 p-6 backdrop-blur-sm transition-all hover:border-cosmic-500/50 hover:shadow-lg hover:shadow-cosmic-500/10"
+              className={`group rounded-2xl border border-space-700/50 bg-space-900/50 p-6 backdrop-blur-sm transition-all hover:border-cosmic-500/50 hover:shadow-lg hover:shadow-cosmic-500/10 ${
+                project.status === 'cancelled' ? 'opacity-60' : ''
+              }`}
             >
               {/* Status Badge */}
               <div className="flex items-center justify-between">
@@ -198,19 +201,21 @@ function ProjectsPageContent({
                 </p>
               )}
 
-              {/* Progress Bar */}
-              <div className="mt-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-stardust-400">Progress</span>
-                  <span className="font-medium text-stardust-100">{project.progress_percent}%</span>
+              {/* Progress Bar - Hidden for cancelled projects */}
+              {project.status !== 'cancelled' && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-stardust-400">Progress</span>
+                    <span className="font-medium text-stardust-100">{project.progress_percent}%</span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-space-800">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-cosmic-500 to-nebula-500 transition-all"
+                      style={{ width: `${project.progress_percent}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-space-800">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-cosmic-500 to-nebula-500 transition-all"
-                    style={{ width: `${project.progress_percent}%` }}
-                  />
-                </div>
-              </div>
+              )}
 
               {/* Footer */}
               <div className="mt-4 flex items-center justify-between border-t border-space-700/50 pt-4">

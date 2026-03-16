@@ -4,8 +4,8 @@
 
 // Enums
 export type UserRole = 'owner' | 'pm' | 'dev' | 'client'
-export type ProjectStatus = 'onboarding' | 'active' | 'paused' | 'completed'
-export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'client_approval' | 'done'
+export type ProjectStatus = 'onboarding' | 'active' | 'paused' | 'completed' | 'cancelled'
+export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'client_approval' | 'done' | 'cancelled'
 export type UpdateType = 'milestone' | 'blocker' | 'delivery' | 'approval'
 
 // Tables
@@ -28,6 +28,7 @@ export interface Project {
   client_id: string | null
   manager_id: string | null
   progress_percent: number
+  cancellation_reason: string | null
   created_at: string
   updated_at: string
 }

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { KanbanBoard } from '@/components/kanban'
 import { AIProjectReport } from '@/components/ai'
+import { ProjectActions } from '@/components/projects/ProjectActions'
 import Link from 'next/link'
 
 const statusColors: Record<string, string> = {
@@ -9,6 +10,7 @@ const statusColors: Record<string, string> = {
   active: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   paused: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   completed: 'bg-stardust-400/20 text-stardust-300 border-stardust-400/30',
+  cancelled: 'bg-red-500/20 text-red-300 border-red-500/30',
 }
 
 const updateTypeIcons: Record<string, string> = {
@@ -111,6 +113,23 @@ export default async function ProjectDetailPage({
         <span className="text-stardust-100">{project.name}</span>
       </nav>
 
+      {/* Cancellation Banner */}
+      {project.status === 'cancelled' && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">
+          <div className="flex gap-3">
+            <svg className="h-5 w-5 flex-shrink-0 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <div className="flex-1">
+              <h3 className="font-semibold text-red-300">Project Cancelled</h3>
+              {project.cancellation_reason && (
+                <p className="mt-1 text-sm text-red-200">{project.cancellation_reason}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex-1">
@@ -147,7 +166,7 @@ export default async function ProjectDetailPage({
           {/* AI Report Button - Available for clients and managers */}
           <AIProjectReport projectId={id} projectName={project.name} />
 
-          {canEdit && (
+          {canEdit && project.status !== 'cancelled' && (
             <>
               <Link
                 href={`/projects/${id}/edit`}
@@ -169,6 +188,9 @@ export default async function ProjectDetailPage({
             </Link>
             </>
           )}
+
+          {/* Project Actions - Cancel/Reactivate */}
+          <ProjectActions project={project} canEdit={canEdit} isOwner={profile.role === 'owner'} />
         </div>
       </div>
 

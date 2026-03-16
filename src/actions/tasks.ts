@@ -5,6 +5,23 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { TaskStatus } from '@/types/database'
 
+// Helper to recalculate project progress based on completed tasks
+async function recalculateProjectProgress(projectId: string, supabase: any) {
+  const { data: tasks } = await supabase
+    .from('tasks')
+    .select('status')
+    .eq('project_id', projectId)
+
+  const total = tasks?.length || 0
+  const done = tasks?.filter((t: any) => t.status === 'done').length || 0
+  const progress = total === 0 ? 0 : Math.round((done / total) * 100)
+
+  await supabase
+    .from('projects')
+    .update({ progress_percent: progress })
+    .eq('id', projectId)
+}
+
 export async function createTask(formData: FormData): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -35,6 +52,9 @@ export async function createTask(formData: FormData): Promise<void> {
     redirect(`/projects/${projectId}?error=task_creation_failed`)
   }
 
+  // Recalculate project progress
+  await recalculateProjectProgress(projectId, supabase)
+
   revalidatePath('/projects')
   revalidatePath('/tasks')
   revalidatePath(`/projects/${projectId}`)
@@ -49,6 +69,13 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus) {
     return { error: 'Not authenticated' }
   }
 
+  // Get task to find project_id
+  const { data: task } = await supabase
+    .from('tasks')
+    .select('project_id')
+    .eq('id', taskId)
+    .single()
+
   const { error } = await supabase
     .from('tasks')
     .update({ status })
@@ -56,6 +83,11 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus) {
 
   if (error) {
     return { error: error.message }
+  }
+
+  // Recalculate project progress
+  if (task?.project_id) {
+    await recalculateProjectProgress(task.project_id, supabase)
   }
 
   revalidatePath('/projects')
@@ -110,6 +142,13 @@ export async function deleteTask(taskId: string) {
     return { error: 'Not authenticated' }
   }
 
+  // Get task to find project_id before deletion
+  const { data: task } = await supabase
+    .from('tasks')
+    .select('project_id')
+    .eq('id', taskId)
+    .single()
+
   const { error } = await supabase
     .from('tasks')
     .delete()
@@ -117,6 +156,11 @@ export async function deleteTask(taskId: string) {
 
   if (error) {
     return { error: error.message }
+  }
+
+  // Recalculate project progress
+  if (task?.project_id) {
+    await recalculateProjectProgress(task.project_id, supabase)
   }
 
   revalidatePath('/projects')

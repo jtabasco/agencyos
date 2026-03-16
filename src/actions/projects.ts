@@ -213,3 +213,117 @@ export async function removeProjectMember(projectId: string, userId: string) {
   revalidatePath('/projects')
   return { success: true }
 }
+
+export async function cancelProject(projectId: string, reason: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  // Check authorization (owner or pm who manages the project)
+  const { data: project } = await supabase
+    .from('projects')
+    .select('manager_id')
+    .eq('id', projectId)
+    .single()
+
+  if (!project) {
+    return { error: 'Project not found' }
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  const canEdit = profile?.role === 'owner' || (profile?.role === 'pm' && project.manager_id === user.id)
+
+  if (!canEdit) {
+    return { error: 'Not authorized to cancel this project' }
+  }
+
+  // Update project status to cancelled
+  const { error: projectError } = await supabase
+    .from('projects')
+    .update({
+      status: 'cancelled',
+      cancellation_reason: reason,
+    })
+    .eq('id', projectId)
+
+  if (projectError) {
+    console.error('Error cancelling project:', projectError.message)
+    return { error: `Failed to cancel project: ${projectError.message}` }
+  }
+
+  // Cancel all tasks in the project
+  const { error: tasksError } = await supabase
+    .from('tasks')
+    .update({ status: 'cancelled' })
+    .eq('project_id', projectId)
+    .neq('status', 'done') // Don't cancel already done tasks
+
+  if (tasksError) {
+    console.error('Error cancelling tasks:', tasksError.message)
+  }
+
+  revalidatePath('/projects')
+  revalidatePath('/dashboard')
+  revalidatePath(`/projects/${projectId}`)
+
+  return { success: true }
+}
+
+export async function reactivateProject(projectId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  // Only owner can reactivate
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.role !== 'owner') {
+    return { error: 'Only owners can reactivate projects' }
+  }
+
+  // Update project status to paused and clear cancellation reason
+  const { error: projectError } = await supabase
+    .from('projects')
+    .update({
+      status: 'paused',
+      cancellation_reason: null,
+    })
+    .eq('id', projectId)
+
+  if (projectError) {
+    console.error('Error reactivating project:', projectError.message)
+    return { error: `Failed to reactivate project: ${projectError.message}` }
+  }
+
+  // Reactivate cancelled tasks
+  const { error: tasksError } = await supabase
+    .from('tasks')
+    .update({ status: 'todo' })
+    .eq('project_id', projectId)
+    .eq('status', 'cancelled')
+
+  if (tasksError) {
+    console.error('Error reactivating tasks:', tasksError.message)
+  }
+
+  revalidatePath('/projects')
+  revalidatePath('/dashboard')
+  revalidatePath(`/projects/${projectId}`)
+
+  return { success: true }
+}

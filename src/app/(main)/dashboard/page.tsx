@@ -8,6 +8,7 @@ const statusColors = {
   active: 'bg-emerald-500/20 text-emerald-300',
   paused: 'bg-amber-500/20 text-amber-300',
   completed: 'bg-stardust-400/20 text-stardust-300',
+  cancelled: 'bg-red-500/20 text-red-300',
 }
 
 export default async function DashboardPage() {
