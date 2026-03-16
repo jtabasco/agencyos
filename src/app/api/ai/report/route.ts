@@ -1,6 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { streamText } from 'ai'
-import { google } from '@ai-sdk/google'
+import { createOpenAI } from '@ai-sdk/openai'
+
+const openrouter = createOpenAI({
+  baseURL: 'https://openrouter.ai/api/v1',
+  apiKey: process.env.OPENROUTER_API_KEY,
+})
 
 export const maxDuration = 30
 
@@ -115,7 +120,7 @@ ${JSON.stringify(formattedUpdates, null, 2)}
 Generate a professional status report for the client based on this data.`
 
   const result = streamText({
-    model: google('gemini-2.0-flash'),
+    model: openrouter('google/gemini-2.0-flash-001'),
     system: systemPrompt,
     prompt: 'Generate the executive status report for this project.',
   })
