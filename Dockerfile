@@ -24,9 +24,11 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Copy built application from builder
-COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+
+# Create public directory for static files
+RUN mkdir -p ./public
 
 # Copy production dependencies
 COPY --from=deps /app/node_modules ./node_modules
