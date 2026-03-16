@@ -19,7 +19,11 @@
       "mcp__plugin_playwright_playwright__browser_take_screenshot",
       "Bash(find:*)",
       "Bash(sleep:*)",
-      "Bash(supabase db:*)"
+      "Bash(supabase db:*)",
+      "Bash(npm list:*)",
+      "Bash(node:*)",
+      "Bash(npm install:*)",
+      "Bash(git add:*)"
     ]
   }
 }
