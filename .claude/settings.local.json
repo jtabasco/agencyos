@@ -27,7 +27,8 @@
       "Bash(cat:*)",
       "Bash(taskkill:*)",
       "Bash(npx tsc:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(ls:*)"
     ]
   }
 }
