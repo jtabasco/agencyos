@@ -28,7 +28,8 @@
       "Bash(taskkill:*)",
       "Bash(npx tsc:*)",
       "Bash(cd:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(grep:*)"
     ]
   }
 }
