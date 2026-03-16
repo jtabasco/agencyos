@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/contexts/ToastContext'
+import { updateUserRole } from '@/actions/users'
 import { Profile, UserRole } from '@/types/database'
 
 const roleColors: Record<UserRole, string> = {
@@ -25,6 +27,8 @@ export default function TeamPage() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<UserRole>('dev')
   const [currentUserRole, setCurrentUserRole] = useState<UserRole | null>(null)
+  const [changingRole, setChangingRole] = useState<string | null>(null)
+  const { toast } = useToast()
 
   const supabase = createClient()
 
@@ -41,11 +45,10 @@ export default function TeamPage() {
         setCurrentUserRole(profile?.role || 'client')
       }
 
-      // Fetch all team members (non-clients)
+      // Fetch all team members
       const { data: teamMembers } = await supabase
         .from('profiles')
         .select('*')
-        .in('role', ['owner', 'pm', 'dev'])
         .order('role')
 
       setMembers(teamMembers || [])
@@ -58,22 +61,24 @@ export default function TeamPage() {
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault()
     // In a real app, this would send an invite email
-    alert(`Invitation would be sent to ${inviteEmail} as ${roleLabels[inviteRole]}`)
+    toast('info', `Invitación sería enviada a ${inviteEmail} como ${roleLabels[inviteRole]}`)
     setShowInviteModal(false)
     setInviteEmail('')
   }
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('id', userId)
+    setChangingRole(userId)
+    const result = await updateUserRole(userId, newRole)
 
-    if (!error) {
+    if (result.error) {
+      toast('error', result.error)
+    } else {
       setMembers(prev =>
         prev.map(m => m.id === userId ? { ...m, role: newRole } : m)
       )
+      toast('success', `Rol actualizado a ${roleLabels[newRole]}`)
     }
+    setChangingRole(null)
   }
 
   if (loading) {
@@ -108,7 +113,7 @@ export default function TeamPage() {
       {/* Stats */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {(['owner', 'pm', 'dev', 'client'] as UserRole[]).map(role => {
-          const count = role === 'client' ? 0 : members.filter(m => m.role === role).length
+          const count = members.filter(m => m.role === role).length
           return (
             <div
               key={role}
@@ -134,6 +139,9 @@ export default function TeamPage() {
       <div className="rounded-2xl border border-space-700/50 bg-space-800/50 backdrop-blur-sm">
         <div className="border-b border-space-700/50 px-6 py-4">
           <h2 className="text-lg font-semibold text-stardust-100">Team Members</h2>
+          <p className="mt-1 text-sm text-stardust-400">
+            {currentUserRole === 'owner' ? 'Click on a role to change it' : 'View all team members'}
+          </p>
         </div>
         <div className="divide-y divide-space-700/50">
           {members.length === 0 ? (
@@ -161,7 +169,8 @@ export default function TeamPage() {
                     <select
                       value={member.role}
                       onChange={(e) => handleRoleChange(member.id, e.target.value as UserRole)}
-                      className="rounded-lg border border-space-700 bg-space-800 px-3 py-1.5 text-sm text-stardust-100 focus:border-cosmic-500 focus:outline-none"
+                      disabled={changingRole === member.id}
+                      className="rounded-lg border border-space-700 bg-space-800 px-3 py-1.5 text-sm text-stardust-100 focus:border-cosmic-500 focus:outline-none disabled:opacity-50 cursor-pointer"
                     >
                       <option value="pm">Project Manager</option>
                       <option value="dev">Developer</option>
@@ -214,6 +223,7 @@ export default function TeamPage() {
                 >
                   <option value="pm">Project Manager</option>
                   <option value="dev">Developer</option>
+                  <option value="client">Client</option>
                 </select>
               </div>
 

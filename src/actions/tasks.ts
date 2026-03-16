@@ -38,7 +38,7 @@ export async function createTask(formData: FormData): Promise<void> {
   revalidatePath('/projects')
   revalidatePath('/tasks')
   revalidatePath(`/projects/${projectId}`)
-  redirect(`/projects/${projectId}`)
+  redirect(`/projects/${projectId}?toast=success&message=Tarea+creada+exitosamente`)
 }
 
 export async function updateTaskStatus(taskId: string, status: TaskStatus) {

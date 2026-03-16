@@ -15,6 +15,7 @@ export interface Profile {
   full_name: string | null
   avatar_url: string | null
   role: UserRole
+  preferred_language: 'en' | 'es' | 'fr'
   created_at: string
   updated_at: string
 }

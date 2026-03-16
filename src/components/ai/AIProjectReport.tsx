@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useCompletion } from '@ai-sdk/react'
 
 interface AIProjectReportProps {
   projectId: string
@@ -10,15 +9,51 @@ interface AIProjectReportProps {
 
 export function AIProjectReport({ projectId, projectName }: AIProjectReportProps) {
   const [isOpen, setIsOpen] = useState(false)
-
-  const { completion, isLoading, complete, error } = useCompletion({
-    api: '/api/ai/report',
-    body: { projectId },
-  })
+  const [completion, setCompletion] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleGenerateReport = async () => {
     setIsOpen(true)
-    await complete('')
+    setCompletion('')
+    setError(null)
+    setIsLoading(true)
+
+    try {
+      const response = await fetch('/api/ai/report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ projectId }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate report')
+      }
+
+      if (!response.body) {
+        throw new Error('No response body')
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let fullText = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        fullText += chunk
+        setCompletion(fullText)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+      console.error('Error generating report:', err)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

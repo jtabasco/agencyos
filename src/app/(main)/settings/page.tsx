@@ -2,17 +2,21 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/contexts/ToastContext'
 import { Profile } from '@/types/database'
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savingPreferences, setSavingPreferences] = useState(false)
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'security' | 'preferences'>('profile')
+  const { toast } = useToast()
 
   // Form state
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
+  const [preferredLanguage, setPreferredLanguage] = useState<'en' | 'es' | 'fr'>('en')
   const [notifications, setNotifications] = useState({
     email_projects: true,
     email_tasks: true,
@@ -36,6 +40,7 @@ export default function SettingsPage() {
           setProfile(data)
           setFullName(data.full_name || '')
           setEmail(data.email || '')
+          setPreferredLanguage(data.preferred_language || 'en')
         }
       }
       setLoading(false)
@@ -54,9 +59,31 @@ export default function SettingsPage() {
 
     if (!error) {
       setProfile({ ...profile, full_name: fullName })
+      toast('success', 'Perfil guardado exitosamente')
+    } else {
+      toast('error', error.message || 'Error al guardar el perfil')
     }
 
     setSaving(false)
+  }
+
+  const handleSavePreferences = async () => {
+    if (!profile) return
+    setSavingPreferences(true)
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ preferred_language: preferredLanguage })
+      .eq('id', profile.id)
+
+    if (!error) {
+      setProfile({ ...profile, preferred_language: preferredLanguage })
+      toast('success', 'Preferencias guardadas exitosamente')
+    } else {
+      toast('error', error.message || 'Error al guardar las preferencias')
+    }
+
+    setSavingPreferences(false)
   }
 
   const handleSignOut = async () => {
@@ -345,12 +372,16 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between px-6 py-4">
                   <div>
                     <p className="font-medium text-stardust-100">Language</p>
-                    <p className="text-sm text-stardust-400">Select your preferred language</p>
+                    <p className="text-sm text-stardust-400">Select your preferred language for AI reports</p>
                   </div>
-                  <select className="rounded-lg border border-space-700 bg-space-800 px-4 py-2 text-sm text-stardust-100 focus:border-cosmic-500 focus:outline-none">
+                  <select
+                    value={preferredLanguage}
+                    onChange={(e) => setPreferredLanguage(e.target.value as 'en' | 'es' | 'fr')}
+                    className="rounded-lg border border-space-700 bg-space-800 px-4 py-2 text-sm text-stardust-100 focus:border-cosmic-500 focus:outline-none"
+                  >
                     <option value="en">English</option>
-                    <option value="es">Spanish</option>
-                    <option value="fr">French</option>
+                    <option value="es">Spanish (Español)</option>
+                    <option value="fr">French (Français)</option>
                   </select>
                 </div>
                 <div className="flex items-center justify-between px-6 py-4">
@@ -365,6 +396,15 @@ export default function SettingsPage() {
                     <option value="cst">Central Time (CT)</option>
                   </select>
                 </div>
+              </div>
+              <div className="flex justify-end border-t border-space-700/50 p-6">
+                <button
+                  onClick={handleSavePreferences}
+                  disabled={savingPreferences}
+                  className="rounded-xl bg-gradient-to-r from-cosmic-500 to-nebula-500 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-cosmic-500/25 transition-all hover:shadow-cosmic-500/40 disabled:opacity-50"
+                >
+                  {savingPreferences ? 'Saving...' : 'Save Preferences'}
+                </button>
               </div>
             </div>
           )}

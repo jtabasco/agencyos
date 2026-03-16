@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
+import { MainLayoutClient } from '@/components/layout/MainLayoutClient'
 
 export default async function MainLayout({
   children,
@@ -42,7 +43,9 @@ export default async function MainLayout({
 
         {/* Main content */}
         <main className="relative z-10 min-h-[calc(100vh-4rem)]">
-          {children}
+          <MainLayoutClient>
+            {children}
+          </MainLayoutClient>
         </main>
       </div>
     </div>

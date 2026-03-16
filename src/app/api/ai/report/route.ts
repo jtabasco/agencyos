@@ -17,6 +17,15 @@ export async function POST(req: Request) {
     return new Response('Unauthorized', { status: 401 })
   }
 
+  // Get user's preferred language
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('preferred_language')
+    .eq('id', user.id)
+    .single()
+
+  const language = profile?.preferred_language || 'en'
+
   const { projectId } = await req.json()
 
   if (!projectId) {
@@ -85,6 +94,12 @@ export async function POST(req: Request) {
     date: u.created_at,
   })) || []
 
+  const languageMap: Record<string, string> = {
+    en: 'English',
+    es: 'Spanish',
+    fr: 'French',
+  }
+
   const systemPrompt = `You are a Senior Project Manager at a high-end digital agency. Your task is to generate an executive status report for a client.
 
 Write in a professional but warm tone. Be concise and focus on value delivered. Use bullet points where appropriate.
@@ -96,6 +111,11 @@ IMPORTANT GUIDELINES:
 - End with a clear next steps section
 - Keep the total report under 400 words
 - Use markdown formatting for readability
+
+LANGUAGE REQUIREMENT:
+- Write the ENTIRE report in ${languageMap[language] || 'English'}
+- All headings, bullet points, and body text must be in ${languageMap[language] || 'English'}
+- Do not mix languages
 
 PROJECT CONTEXT:
 Name: ${project.name}

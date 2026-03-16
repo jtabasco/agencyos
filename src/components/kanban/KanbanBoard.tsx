@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { Task, TaskStatus, Profile, UserRole } from '@/types/database'
 import { updateTaskStatus } from '@/actions/tasks'
+import { useToast } from '@/contexts/ToastContext'
 
 interface KanbanBoardProps {
   tasks: Task[]
@@ -23,6 +24,7 @@ export function KanbanBoard({ tasks, teamMembers = [], userRole, projectId }: Ka
   const [localTasks, setLocalTasks] = useState(tasks)
   const [draggedTask, setDraggedTask] = useState<Task | null>(null)
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
+  const { toast } = useToast()
 
   const canMoveCards = userRole === 'owner' || userRole === 'pm'
 
@@ -61,6 +63,9 @@ export function KanbanBoard({ tasks, teamMembers = [], userRole, projectId }: Ka
             t.id === draggedTask.id ? { ...t, status: draggedTask.status } : t
           )
         )
+        toast('error', 'Error al mover la tarea')
+      } else {
+        toast('success', 'Tarea movida exitosamente')
       }
     } catch {
       // Revert on error
@@ -69,6 +74,7 @@ export function KanbanBoard({ tasks, teamMembers = [], userRole, projectId }: Ka
           t.id === draggedTask.id ? { ...t, status: draggedTask.status } : t
         )
       )
+      toast('error', 'Error al mover la tarea')
     } finally {
       setIsUpdating(null)
       setDraggedTask(null)

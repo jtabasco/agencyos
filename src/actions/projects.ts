@@ -48,7 +48,7 @@ export async function createProject(formData: FormData): Promise<void> {
 
   revalidatePath('/projects')
   revalidatePath('/dashboard')
-  redirect(`/projects/${project.id}`)
+  redirect(`/projects/${project.id}?toast=success&message=Proyecto+creado+exitosamente`)
 }
 
 export async function updateProject(projectId: string, formData: FormData) {
@@ -56,7 +56,26 @@ export async function updateProject(projectId: string, formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return { error: 'Not authenticated' }
+    redirect('/login')
+  }
+
+  // Check authorization
+  const { data: project } = await supabase
+    .from('projects')
+    .select('manager_id')
+    .eq('id', projectId)
+    .single()
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  const canEdit = profile?.role === 'owner' || (profile?.role === 'pm' && project?.manager_id === user.id)
+
+  if (!canEdit) {
+    redirect(`/projects/${projectId}`)
   }
 
   const name = formData.get('name') as string
@@ -85,12 +104,14 @@ export async function updateProject(projectId: string, formData: FormData) {
     .eq('id', projectId)
 
   if (error) {
-    return { error: error.message }
+    console.error('Error updating project:', error.message)
+    redirect(`/projects/${projectId}?error=update_failed`)
   }
 
   revalidatePath('/projects')
   revalidatePath('/dashboard')
-  return { success: true }
+  revalidatePath(`/projects/${projectId}`)
+  redirect(`/projects/${projectId}?toast=success&message=Proyecto+actualizado+exitosamente`)
 }
 
 export async function updateProjectProgress(projectId: string, progress: number) {
