@@ -1,0 +1,2 @@
+[    2269ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/favicon.ico:0
+[  144850ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://api.ciclomaja.jtabasco.com/rest/v1/profiles?id=eq.bb5d499d-8e9e-4560-9f5a-87733c2d0ce5:0

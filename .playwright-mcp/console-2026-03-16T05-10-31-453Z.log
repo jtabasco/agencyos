@@ -1,0 +1,13 @@
+[  161524ms] [ERROR] ./src/app/layout.tsx:3:1
+Module not found: Can't resolve '@/components/layout/RootLayoutClient'
+  1 | import type { Metadata } from 'next'
+  2 | import './globals.css'
+> 3 | import { RootLayoutClient } from '@/components/layout/RootLayoutClient'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  4 |
+  5 | export const metadata: Metadata = {
+  6 |   title: 'AgencyOS',
+
+Import map: aliased to relative './src/components/layout/RootLayoutClient' inside of [project]/
+
+https://nextjs.org/docs/messages/module-not-found @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
