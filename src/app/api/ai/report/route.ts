@@ -7,6 +7,10 @@ const openrouter = createOpenAI({
   apiKey: process.env.OPENROUTER_API_KEY,
 })
 
+if (!process.env.OPENROUTER_API_KEY) {
+  console.error('OPENROUTER_API_KEY is not set')
+}
+
 export const maxDuration = 30
 
 export async function POST(req: Request) {
@@ -140,7 +144,7 @@ ${JSON.stringify(formattedUpdates, null, 2)}
 Generate a professional status report for the client based on this data.`
 
   const result = streamText({
-    model: openrouter('google/gemini-2.0-flash-001'),
+    model: openrouter('openai/gpt-4-turbo'),
     system: systemPrompt,
     prompt: 'Generate the executive status report for this project.',
   })
