@@ -23,7 +23,8 @@
       "Bash(npm list:*)",
       "Bash(node:*)",
       "Bash(npm install:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(cat:*)"
     ]
   }
 }
