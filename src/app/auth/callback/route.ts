@@ -22,12 +22,9 @@ export async function GET(request: Request) {
   })
 
   const supabase = await createClient()
-  
-  // 1. Server-side logout (clears cookies)
-  await supabase.auth.signOut()
 
   if (code) {
-    // PKCE Flow
+    // PKCE Flow (used by some Supabase invitation flows)
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
       return NextResponse.redirect(finalRedirectUrl.toString())
@@ -35,22 +32,17 @@ export async function GET(request: Request) {
     console.error('Auth callback exchange error:', error)
   }
 
-  // 2. Client-side aggressive logout + hash detection
-  // This is needed for invitations because they use hashes (#access_token)
-  // which the server cannot see. We must clear client storage manually.
+  // Hash-based flow: invitations use #access_token which is invisible to the server.
+  // Redirect client-side so the browser Supabase client can parse the hash.
   return new NextResponse(
     `<html>
       <head>
         <script>
           (function() {
-            // Aggressive cleanup to avoid session collision
-            localStorage.clear();
-            sessionStorage.clear();
-            
             const hash = window.location.hash;
             const finalDestination = "${finalRedirectUrl.toString()}" + hash;
-            
-            if (hash || "${code}" === "null") {
+
+            if (hash) {
               window.location.replace(finalDestination);
             } else {
               window.location.replace("${redirectBase}/auth/auth-code-error");
@@ -58,7 +50,7 @@ export async function GET(request: Request) {
           })();
         </script>
       </head>
-      <body><p>Redirecting safely...</p></body>
+      <body><p>Redirecting...</p></body>
     </html>`,
     { headers: { 'Content-Type': 'text/html' } }
   )

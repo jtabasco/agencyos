@@ -16,47 +16,32 @@ function ResetPasswordContent() {
 
   useEffect(() => {
     let mounted = true
-
-    async function checkInitialSession() {
-      // Small delay to allow hash parsing by the Supabase client
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      if (mounted) {
-        setUser(currentUser)
-        // If we have a user, we can stop loading
-        if (currentUser) {
-          setLoading(false)
-        } else {
-          // If no user after 2 seconds total, show error
-          setTimeout(() => {
-            if (mounted && !user) {
-              setLoading(false)
-              setErrorVisible(true)
-            }
-          }, 1500)
-        }
-      }
-    }
+    let errorTimer: ReturnType<typeof setTimeout>
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state change in page:', event, session?.user?.email)
-      if (mounted) {
-        if (session?.user) {
-          setUser(session.user)
-          setLoading(false)
-          setErrorVisible(false)
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null)
-          // Don't set loading false yet, wait for possible re-login from hash
-        }
+      if (!mounted) return
+
+      if (session?.user) {
+        clearTimeout(errorTimer)
+        setUser(session.user)
+        setLoading(false)
+        setErrorVisible(false)
+      } else if (event === 'INITIAL_SESSION') {
+        // No session on page load — start a timer to show error if nothing arrives
+        errorTimer = setTimeout(() => {
+          if (mounted) {
+            setLoading(false)
+            setErrorVisible(true)
+          }
+        }, 4000)
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null)
       }
     })
 
-    checkInitialSession()
-
     return () => {
       mounted = false
+      clearTimeout(errorTimer)
       subscription.unsubscribe()
     }
   }, [supabase.auth])
