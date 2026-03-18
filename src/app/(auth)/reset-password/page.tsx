@@ -18,6 +18,15 @@ function ResetPasswordContent() {
     let mounted = true
     let errorTimer: ReturnType<typeof setTimeout>
 
+    function startErrorTimer() {
+      errorTimer = setTimeout(() => {
+        if (mounted) {
+          setLoading(false)
+          setErrorVisible(true)
+        }
+      }, 4000)
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
 
@@ -27,17 +36,29 @@ function ResetPasswordContent() {
         setLoading(false)
         setErrorVisible(false)
       } else if (event === 'INITIAL_SESSION') {
-        // No session on page load — start a timer to show error if nothing arrives
-        errorTimer = setTimeout(() => {
-          if (mounted) {
-            setLoading(false)
-            setErrorVisible(true)
-          }
-        }, 4000)
+        startErrorTimer()
       } else if (event === 'SIGNED_OUT') {
         setUser(null)
       }
     })
+
+    // Explicitly parse #access_token from hash (Supabase invitation flow)
+    const hash = window.location.hash
+    if (hash && hash.includes('access_token')) {
+      const params = new URLSearchParams(hash.substring(1))
+      const access_token = params.get('access_token')
+      const refresh_token = params.get('refresh_token')
+      if (access_token && refresh_token) {
+        supabase.auth.setSession({ access_token, refresh_token }).then(({ error }) => {
+          if (error && mounted) {
+            clearTimeout(errorTimer)
+            setLoading(false)
+            setErrorVisible(true)
+          }
+          // On success, onAuthStateChange fires SIGNED_IN and handles the rest
+        })
+      }
+    }
 
     return () => {
       mounted = false
