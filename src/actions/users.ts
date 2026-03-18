@@ -59,7 +59,7 @@ export async function inviteUser(email: string, role: UserRole) {
   
   // Invite the user
   const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/reset-password`,
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/reset-password&email=${encodeURIComponent(email)}`,
     data: {
       role: role // This will be used by the handle_new_user trigger
     }

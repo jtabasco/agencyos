@@ -2,53 +2,55 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
+  const url = new URL(request.url)
+  const { searchParams, origin } = url
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/dashboard'
   
+  // Preserve any other query parameters (like ?email=...)
+  const extraParams = new URLSearchParams(searchParams)
+  extraParams.delete('code')
+  extraParams.delete('next')
+  const extraQuery = extraParams.toString() ? `&${extraParams.toString()}` : ''
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
   const redirectBase = process.env.NODE_ENV === 'development' ? origin : siteUrl
 
-  const supabase = await createClient()
-  
-  // 1. Server-side logout (clears cookies)
-  await supabase.auth.signOut()
-
+  // Handle PKCE Flow (Email verification, Password reset)
   if (code) {
-    // PKCE Flow
+    const supabase = await createClient()
+    
+    // Explicit sign out on the server to clear old session cookies
+    await supabase.auth.signOut()
+
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${redirectBase}${next}`)
+      return NextResponse.redirect(`${redirectBase}${next}${extraQuery}`)
     }
+    console.error('Auth callback exchange error:', error)
   }
 
-  // 2. Client-side aggressive logout + hash detection
-  // This is needed for invitations because they use hashes (#access_token)
-  // which the server cannot see. We must clear client storage manually.
+  // Handle Invitation/Hash Flow
+  // We return a page that clears local storage and then redirects with the hash.
+  // This is better than a simple redirect because it cleans up the browser state.
   return new NextResponse(
     `<html>
       <head>
         <script>
-          const finalize = () => {
-            // Clear current domain storage to avoid session mixing
+          (function() {
+            // Aggressive cleanup to avoid session collision
             localStorage.clear();
             sessionStorage.clear();
             
             const hash = window.location.hash;
-            if (hash && hash.includes('access_token=')) {
-              // Redirect to final destination with the token hash
-              window.location.href = '${redirectBase}${next}' + hash;
-            } else if ('${code}' === 'null' && !hash) {
-              // If no code and no hash, redirect to login
-              window.location.href = '${redirectBase}/login';
-            } else if ('${code}' !== 'null') {
-              // If we HAD a code, the server already attempted exchange and failed (if we are still here)
-              window.location.href = '${redirectBase}/auth/auth-code-error';
+            const fullNext = '${redirectBase}${next}${extraQuery}' + hash;
+            
+            if (hash || '${code}' === 'null') {
+              window.location.replace(fullNext);
             } else {
-              window.location.href = '${redirectBase}/login';
+              window.location.replace('${redirectBase}/auth/auth-code-error');
             }
-          };
-          finalize();
+          })();
         </script>
       </head>
       <body><p>Redirecting safely...</p></body>
