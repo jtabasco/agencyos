@@ -7,22 +7,24 @@ export async function GET(request: Request) {
   // if "next" is in search params, use it as the redirection URL
   const next = searchParams.get('next') ?? '/dashboard'
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
+  const redirectBase = process.env.NODE_ENV === 'development' ? origin : siteUrl
+
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      const isLocalEnv = process.env.NODE_ENV === 'development'
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
-
-      if (isLocalEnv) {
-        return NextResponse.redirect(`${origin}${next}`)
-      } else {
-        // Use the hardcoded SITE_URL to avoid VPS "origin" issues
-        return NextResponse.redirect(`${siteUrl}${next}`)
-      }
+      return NextResponse.redirect(`${redirectBase}${next}`)
     }
+    console.error('Auth callback exchange error:', error)
+  }
+
+  // Fallback: If no code, but we have a 'next' param, it might be an implicit flow (hash)
+  // or a flow handled by the client SDK. Redirect to the destination.
+  if (next && !searchParams.get('error')) {
+    return NextResponse.redirect(`${redirectBase}${next}`)
   }
 
   // return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+  return NextResponse.redirect(`${redirectBase}/auth/auth-code-error`)
 }
