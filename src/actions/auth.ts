@@ -21,15 +21,19 @@ export async function login(formData: FormData) {
 }
 
 export async function signup(formData: FormData) {
+  console.log('--- Signup debug ---')
+  console.log('SITE_URL:', process.env.NEXT_PUBLIC_SITE_URL)
   const supabase = await createClient()
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: formData.get('email') as string,
     password: formData.get('password') as string,
     options: {
       emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`,
     },
   })
+
+  console.log('Signup result - data:', !!data.user, 'error:', error)
 
   if (error) {
     return { error: error.message }
