@@ -9,11 +9,11 @@ export async function GET(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
   const redirectBase = process.env.NODE_ENV === 'development' ? origin : siteUrl
 
+  // Handle PKCE Flow (Email verification, Password reset)
   if (code) {
     const supabase = await createClient()
     
-    // Safety: If there is an existing session, we sign out to avoid collisions 
-    // when clicking an invitation link while logged in as another user.
+    // Safety: Always sign out before exchanging code to avoid session mixing
     await supabase.auth.signOut()
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
@@ -24,15 +24,30 @@ export async function GET(request: Request) {
     console.error('Auth callback exchange error:', error)
   }
 
-  // Security: Don't allow fallback to sensitive routes like /reset-password if code exchange failed
-  if (next.includes('/reset-password')) {
-    return NextResponse.redirect(`${redirectBase}/auth/auth-code-error`)
-  }
-
-  // Fallback for non-sensitive routes
-  if (next && !searchParams.get('error')) {
-    return NextResponse.redirect(`${redirectBase}${next}`)
-  }
-
-  return NextResponse.redirect(`${redirectBase}/auth/auth-code-error`)
+  // Handle Implicit Flow (Invitations often use hash fragments like #access_token=...)
+  // Since the server cannot see the hash, we return a small script to handle it on the client
+  return new NextResponse(
+    `<html>
+      <head>
+        <script>
+          // Check if there is a hash with an access_token (Implicit Flow)
+          const hash = window.location.hash;
+          if (hash && hash.includes('access_token=')) {
+            // Let the Supabase client handle the session from the hash
+            // Then redirect to the final destination
+            window.location.href = '${redirectBase}${next}' + hash;
+          } else {
+            // If no hash and no code, it's an error
+            window.location.href = '${redirectBase}/auth/auth-code-error';
+          }
+        </script>
+      </head>
+      <body>
+        <p>Redirecting...</p>
+      </body>
+    </html>`,
+    {
+      headers: { 'Content-Type': 'text/html' },
+    }
+  )
 }
