@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { UpdatePasswordForm } from '@/features/auth/components'
 import Link from 'next/link'
 
-export default function UpdatePasswordPage() {
+function ResetPasswordContent() {
   const searchParams = useSearchParams()
   const invitedEmail = searchParams.get('email')
   const [user, setUser] = useState<any>(null)
@@ -15,13 +15,11 @@ export default function UpdatePasswordPage() {
 
   useEffect(() => {
     async function getUser() {
-      // Force refresh user from Supabase
       const { data: { user: currentUser } } = await supabase.auth.getUser()
       setUser(currentUser)
       setLoading(false)
     }
 
-    // Listen for auth changes (like when the hash token is processed)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth event change:', event, session?.user?.email)
       if (session?.user) {
@@ -39,9 +37,8 @@ export default function UpdatePasswordPage() {
     }
   }, [supabase.auth])
 
-  // Security Guard: Check if the logged-in user matches the invited email
   const isMatch = useMemo(() => {
-    if (!user || !invitedEmail) return true // Default to true if info is missing
+    if (!user || !invitedEmail) return true
     return user.email?.toLowerCase() === invitedEmail.toLowerCase()
   }, [user, invitedEmail])
 
@@ -109,5 +106,17 @@ export default function UpdatePasswordPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function UpdatePasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-spin h-8 w-8 text-cosmic-500" />
+      </div>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
   )
 }
