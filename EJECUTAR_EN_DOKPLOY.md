@@ -17,34 +17,37 @@
 -- ============================================
 -- MIGRATION 1: Agregar columna preferred_language
 -- ============================================
-ALTER TABLE public.profiles
+ALTER TABLE "AgencyOS".profiles
 ADD COLUMN IF NOT EXISTS preferred_language TEXT NOT NULL DEFAULT 'en'
 CHECK (preferred_language IN ('en', 'es', 'fr'));
 
 CREATE INDEX IF NOT EXISTS idx_profiles_preferred_language
-ON public.profiles(preferred_language);
+ON "AgencyOS".profiles(preferred_language);
 
 -- ============================================
 -- MIGRATION 2: Arreglar trigger de rol por defecto
 -- ============================================
-CREATE OR REPLACE FUNCTION public.handle_new_user()
+CREATE OR REPLACE FUNCTION "AgencyOS".handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = public
+SECURITY DEFINER SET search_path = "AgencyOS"
 AS $$
 DECLARE
   user_count INTEGER;
 BEGIN
-  SELECT COUNT(*) INTO user_count FROM profiles;
+  SELECT COUNT(*) INTO user_count FROM "AgencyOS".profiles;
 
-  INSERT INTO public.profiles (
+  INSERT INTO "AgencyOS".profiles (
     id, email, full_name, role, preferred_language, avatar_url, created_at, updated_at
   )
   VALUES (
     new.id,
     new.email,
     COALESCE(new.raw_user_meta_data->>'full_name', ''),
-    CASE WHEN user_count = 0 THEN 'owner'::text ELSE 'client'::text END,
+    COALESCE(
+      new.raw_user_meta_data->>'role',
+      CASE WHEN user_count = 0 THEN 'owner' ELSE 'client' END
+    ),
     'en',
     COALESCE(new.raw_user_meta_data->>'avatar_url', NULL),
     NOW(),
@@ -60,9 +63,9 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
-  EXECUTE FUNCTION public.handle_new_user();
+  EXECUTE FUNCTION "AgencyOS".handle_new_user();
 
-GRANT EXECUTE ON FUNCTION public.handle_new_user() TO authenticated, anon, service_role;
+GRANT EXECUTE ON FUNCTION "AgencyOS".handle_new_user() TO authenticated, anon, service_role;
 ```
 
 ---

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/contexts/ToastContext'
-import { updateUserRole } from '@/actions/users'
+import { updateUserRole, inviteUser } from '@/actions/users'
 import { Profile, UserRole } from '@/types/database'
 
 const roleColors: Record<UserRole, string> = {
@@ -28,6 +28,7 @@ export default function TeamPage() {
   const [inviteRole, setInviteRole] = useState<UserRole>('dev')
   const [currentUserRole, setCurrentUserRole] = useState<UserRole | null>(null)
   const [changingRole, setChangingRole] = useState<string | null>(null)
+  const [inviting, setInviting] = useState(false)
   const { toast } = useToast()
 
   const supabase = createClient()
@@ -60,10 +61,18 @@ export default function TeamPage() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault()
-    // In a real app, this would send an invite email
-    toast('info', `Invitación sería enviada a ${inviteEmail} como ${roleLabels[inviteRole]}`)
-    setShowInviteModal(false)
-    setInviteEmail('')
+    setInviting(true)
+
+    const result = await inviteUser(inviteEmail, inviteRole)
+
+    if (result.error) {
+      toast('error', result.error)
+    } else {
+      toast('success', `Invitación enviada a ${inviteEmail}`)
+      setShowInviteModal(false)
+      setInviteEmail('')
+    }
+    setInviting(false)
   }
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
@@ -237,9 +246,10 @@ export default function TeamPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 rounded-xl bg-gradient-to-r from-cosmic-500 to-nebula-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-cosmic-500/25 transition-all hover:shadow-cosmic-500/40"
+                  disabled={inviting}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-cosmic-500 to-nebula-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-cosmic-500/25 transition-all hover:shadow-cosmic-500/40 disabled:opacity-50"
                 >
-                  Send Invite
+                  {inviting ? 'Sending...' : 'Send Invite'}
                 </button>
               </div>
             </form>
