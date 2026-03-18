@@ -11,32 +11,57 @@ function ResetPasswordContent() {
   const invitedEmail = searchParams.get('email')
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [errorVisible, setErrorVisible] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
-    async function getUser() {
+    let mounted = true
+
+    async function checkInitialSession() {
+      // Small delay to allow hash parsing by the Supabase client
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
       const { data: { user: currentUser } } = await supabase.auth.getUser()
-      setUser(currentUser)
-      setLoading(false)
+      if (mounted) {
+        setUser(currentUser)
+        // If we have a user, we can stop loading
+        if (currentUser) {
+          setLoading(false)
+        } else {
+          // If no user after 2 seconds total, show error
+          setTimeout(() => {
+            if (mounted && !user) {
+              setLoading(false)
+              setErrorVisible(true)
+            }
+          }, 1500)
+        }
+      }
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth event change:', event, session?.user?.email)
-      if (session?.user) {
-        setUser(session.user)
-      } else {
-        setUser(null)
+      console.log('Auth state change in page:', event, session?.user?.email)
+      if (mounted) {
+        if (session?.user) {
+          setUser(session.user)
+          setLoading(false)
+          setErrorVisible(false)
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null)
+          // Don't set loading false yet, wait for possible re-login from hash
+        }
       }
-      setLoading(false)
     })
 
-    getUser()
+    checkInitialSession()
 
     return () => {
+      mounted = false
       subscription.unsubscribe()
     }
   }, [supabase.auth])
 
+  // Security Guard: Check if the logged-in user matches the invited email
   const isMatch = useMemo(() => {
     if (!user || !invitedEmail) return true
     return user.email?.toLowerCase() === invitedEmail.toLowerCase()
@@ -53,28 +78,31 @@ function ResetPasswordContent() {
           </div>
           <h1 className="text-3xl font-bold text-stardust-100">Set new password</h1>
           
-          <div className="mt-4 min-h-[60px] flex flex-col items-center justify-center">
+          <div className="mt-4 min-h-[70px] flex flex-col items-center justify-center">
             {loading ? (
-              <div className="flex items-center gap-2 text-stardust-400">
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                <span>Verifying secure session...</span>
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex items-center gap-2 text-stardust-400">
+                  <svg className="animate-spin h-5 w-5 text-nebula-500" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span>Securing your session...</span>
+                </div>
+                <p className="text-[10px] text-stardust-500 uppercase tracking-widest mt-1">Please wait a moment</p>
               </div>
             ) : user ? (
               <>
                 {!isMatch ? (
-                  <div className="w-full p-4 rounded-xl bg-rose-500/10 border-2 border-rose-500/30 text-rose-400 animate-pulse">
-                    <p className="font-bold text-sm">⚠️ CRITICAL: ACCOUNT MISMATCH</p>
+                  <div className="w-full p-4 rounded-xl bg-rose-500/10 border-2 border-rose-500/30 text-rose-400">
+                    <p className="font-bold text-sm">⚠️ SESSION CONFLICT</p>
                     <p className="text-xs mt-1">
-                      You are logged in as <strong>{user.email}</strong>, but this invitation is for <strong>{invitedEmail}</strong>.
+                      You are logged in as <strong>{user.email}</strong>, but this link is for <strong>{invitedEmail}</strong>.
                     </p>
                     <button 
                       onClick={() => supabase.auth.signOut().then(() => window.location.reload())}
-                      className="mt-3 text-xs font-bold px-3 py-1.5 rounded-lg bg-rose-500 text-white hover:bg-rose-600 transition-colors"
+                      className="mt-3 w-full text-xs font-bold px-3 py-2 rounded-lg bg-rose-500 text-white hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/20"
                     >
-                      LOGOUT & RE-ENROLL SAFELY
+                      LOGOUT TO CONTINUE SAFELY
                     </button>
                   </div>
                 ) : (
@@ -82,26 +110,31 @@ function ResetPasswordContent() {
                     <div className="inline-block px-4 py-2 rounded-lg bg-cosmic-500/10 border border-cosmic-500/20 text-cosmic-300">
                       Changing password for: <span className="font-semibold text-stardust-100">{user.email}</span>
                     </div>
-                    <p className="mt-4 text-xs text-stardust-400 uppercase tracking-widest font-medium">
-                      Not you? <button onClick={() => supabase.auth.signOut().then(() => window.location.reload())} className="text-nebula-400 hover:text-nebula-300 transition-colors">Sign out</button>
+                    <p className="mt-4 text-[10px] text-stardust-400 uppercase tracking-widest font-medium">
+                      Not you? <button onClick={() => supabase.auth.signOut().then(() => window.location.reload())} className="text-nebula-400 hover:text-nebula-300 transition-colors underline underline-offset-4">Sign out</button>
                     </p>
                   </>
                 )}
               </>
-            ) : (
-              <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3">
-                <p className="text-sm text-yellow-500">
+            ) : errorVisible ? (
+              <div className="rounded-xl border border-stardust-500/10 bg-stardust-500/5 p-4 text-center">
+                <p className="text-sm text-stardust-300">
                   Authentication session expired or invalid.
                 </p>
-                <Link href="/login" className="mt-2 inline-block text-xs font-semibold text-stardust-300 underline underline-offset-4">
-                  Request a new link
-                </Link>
+                <div className="mt-3 flex gap-4 justify-center">
+                  <Link href="/login" className="text-xs font-bold text-nebula-400 hover:text-nebula-300 transition-colors">
+                    Back to Login
+                  </Link>
+                  <button onClick={() => window.location.reload()} className="text-xs font-bold text-stardust-400 hover:text-stardust-200">
+                    Try Again
+                  </button>
+                </div>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 
-        <div className={`rounded-2xl border border-space-700/50 bg-space-900/50 p-8 backdrop-blur-xl shadow-2xl transition-all duration-300 ${!user || loading || !isMatch ? 'opacity-30 blur-sm pointer-events-none' : 'opacity-100'}`}>
+        <div className={`rounded-2xl border border-space-700/50 bg-space-900/50 p-8 backdrop-blur-xl shadow-2xl transition-all duration-500 ${!user || loading || !isMatch ? 'opacity-20 blur-sm pointer-events-none scale-[0.98]' : 'opacity-100 scale-100'}`}>
           <UpdatePasswordForm />
         </div>
       </div>
