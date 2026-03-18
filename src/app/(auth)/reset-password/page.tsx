@@ -1,6 +1,16 @@
 import { UpdatePasswordForm } from '@/features/auth/components'
+import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
-export default function UpdatePasswordPage() {
+export default async function UpdatePasswordPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-md space-y-8">
@@ -12,7 +22,12 @@ export default function UpdatePasswordPage() {
             </svg>
           </div>
           <h1 className="text-3xl font-bold text-stardust-100">Set new password</h1>
-          <p className="mt-2 text-stardust-400">Enter your new password below</p>
+          <div className="mt-4 inline-block px-4 py-2 rounded-lg bg-cosmic-500/10 border border-cosmic-500/20 text-cosmic-300">
+            Changing password for: <span className="font-semibold text-stardust-100">{user.email}</span>
+          </div>
+          <p className="mt-4 text-xs text-stardust-400 uppercase tracking-widest font-medium">
+            Not you? <Link href="/login" className="text-nebula-400 hover:text-nebula-300 transition-colors">Sign out & start over</Link>
+          </p>
         </div>
 
         {/* Form Card */}
