@@ -1,15 +1,34 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { UpdatePasswordForm } from '@/features/auth/components'
-import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 
-export default async function UpdatePasswordPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+export default function UpdatePasswordPage() {
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
 
-  if (!user) {
-    redirect('/login')
-  }
+  useEffect(() => {
+    async function getUser() {
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      setUser(currentUser)
+      setLoading(false)
+    }
+
+    // Listen for auth changes (like when the hash is processed)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null)
+      setLoading(false)
+    })
+
+    getUser()
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [supabase.auth])
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
@@ -22,16 +41,40 @@ export default async function UpdatePasswordPage() {
             </svg>
           </div>
           <h1 className="text-3xl font-bold text-stardust-100">Set new password</h1>
-          <div className="mt-4 inline-block px-4 py-2 rounded-lg bg-cosmic-500/10 border border-cosmic-500/20 text-cosmic-300">
-            Changing password for: <span className="font-semibold text-stardust-100">{user.email}</span>
+          
+          <div className="mt-4 min-h-[50px] flex flex-col items-center justify-center">
+            {loading ? (
+              <div className="flex items-center gap-2 text-stardust-400">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <span>Verifying identity...</span>
+              </div>
+            ) : user ? (
+              <>
+                <div className="inline-block px-4 py-2 rounded-lg bg-cosmic-500/10 border border-cosmic-500/20 text-cosmic-300">
+                  Changing password for: <span className="font-semibold text-stardust-100">{user.email}</span>
+                </div>
+                <p className="mt-4 text-xs text-stardust-400 uppercase tracking-widest font-medium">
+                  Not you? <Link href="/login" className="text-nebula-400 hover:text-nebula-300 transition-colors">Sign out & start over</Link>
+                </p>
+              </>
+            ) : (
+              <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3">
+                <p className="text-sm text-yellow-500">
+                  Authentication failed. Your link may have expired.
+                </p>
+                <Link href="/login" className="mt-2 inline-block text-xs font-semibold text-stardust-300 underline underline-offset-4">
+                  Back to Login
+                </Link>
+              </div>
+            )}
           </div>
-          <p className="mt-4 text-xs text-stardust-400 uppercase tracking-widest font-medium">
-            Not you? <Link href="/login" className="text-nebula-400 hover:text-nebula-300 transition-colors">Sign out & start over</Link>
-          </p>
         </div>
 
         {/* Form Card */}
-        <div className="rounded-2xl border border-space-700/50 bg-space-900/50 p-8 backdrop-blur-xl shadow-2xl">
+        <div className={`rounded-2xl border border-space-700/50 bg-space-900/50 p-8 backdrop-blur-xl shadow-2xl transition-opacity duration-300 ${!user || loading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
           <UpdatePasswordForm />
         </div>
       </div>
