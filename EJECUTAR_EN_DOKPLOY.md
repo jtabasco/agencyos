@@ -14,50 +14,39 @@
 ## 📋 COPIA Y PEGA TODO ESTO EN SQL EDITOR
 
 ```sql
--- ============================================
--- MIGRATION 1: Agregar columna preferred_language
--- ============================================
-ALTER TABLE "AgencyOS".profiles
-ADD COLUMN IF NOT EXISTS preferred_language TEXT NOT NULL DEFAULT 'en'
-CHECK (preferred_language IN ('en', 'es', 'fr'));
+-- 1. SOLUCIÓN DEFINITIVA DE PERMISOS PARA ESQUEMA "AgencyOS"
+GRANT USAGE ON SCHEMA "AgencyOS" TO postgres, service_role, authenticated, anon;
+GRANT ALL ON ALL TABLES IN SCHEMA "AgencyOS" TO postgres, service_role, authenticated, anon;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA "AgencyOS" TO postgres, service_role, authenticated, anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA "AgencyOS" GRANT ALL ON TABLES TO postgres, service_role, authenticated, anon;
 
-CREATE INDEX IF NOT EXISTS idx_profiles_preferred_language
-ON "AgencyOS".profiles(preferred_language);
-
--- ============================================
--- MIGRATION 2: Arreglar trigger de rol por defecto
--- ============================================
+-- 2. FUNCIÓN DE TRIGGER CORREGIDA
 CREATE OR REPLACE FUNCTION "AgencyOS".handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = "AgencyOS"
+SECURITY DEFINER
+SET search_path = "AgencyOS", public
 AS $$
-DECLARE
-  user_count INTEGER;
 BEGIN
-  SELECT COUNT(*) INTO user_count FROM "AgencyOS".profiles;
-
-  INSERT INTO "AgencyOS".profiles (
-    id, email, full_name, role, preferred_language, avatar_url, created_at, updated_at
-  )
+  INSERT INTO "AgencyOS".profiles (id, email, full_name, role, preferred_language)
   VALUES (
     new.id,
     new.email,
     COALESCE(new.raw_user_meta_data->>'full_name', ''),
     COALESCE(
       new.raw_user_meta_data->>'role',
-      CASE WHEN user_count = 0 THEN 'owner' ELSE 'client' END
+      CASE WHEN (SELECT COUNT(*) FROM "AgencyOS".profiles) = 0 THEN 'owner' ELSE 'client' END
     ),
-    'en',
-    COALESCE(new.raw_user_meta_data->>'avatar_url', NULL),
-    NOW(),
-    NOW()
+    'en'
   );
-
+  RETURN new;
+EXCEPTION WHEN OTHERS THEN
+  -- Evita bloquear el registro si falla la creación del perfil
   RETURN new;
 END;
 $$;
 
+-- 3. RECREAR EL TRIGGER
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 
 CREATE TRIGGER on_auth_user_created
@@ -65,7 +54,8 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW
   EXECUTE FUNCTION "AgencyOS".handle_new_user();
 
-GRANT EXECUTE ON FUNCTION "AgencyOS".handle_new_user() TO authenticated, anon, service_role;
+-- 4. PERMISOS DE EJECUCIÓN
+GRANT EXECUTE ON FUNCTION "AgencyOS".handle_new_user() TO postgres, service_role, authenticated, anon;
 ```
 
 ---

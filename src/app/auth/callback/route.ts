@@ -11,15 +11,14 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      const forwardedHost = request.headers.get('x-forwarded-host') // case-insensitive
       const isLocalEnv = process.env.NODE_ENV === 'development'
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
+
       if (isLocalEnv) {
-        // we can be sure that origin is http://localhost:3000
         return NextResponse.redirect(`${origin}${next}`)
-      } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`)
       } else {
-        return NextResponse.redirect(`${origin}${next}`)
+        // Use the hardcoded SITE_URL to avoid VPS "origin" issues
+        return NextResponse.redirect(`${siteUrl}${next}`)
       }
     }
   }
