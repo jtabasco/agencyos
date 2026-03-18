@@ -7,32 +7,37 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/dashboard'
   
-  // Preserve any other query parameters (like ?email=...)
-  const extraParams = new URLSearchParams(searchParams)
-  extraParams.delete('code')
-  extraParams.delete('next')
-  const extraQuery = extraParams.toString() ? `&${extraParams.toString()}` : ''
-
+  // Robust URL construction for the destination
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
   const redirectBase = process.env.NODE_ENV === 'development' ? origin : siteUrl
+  
+  // Create the final redirect URL properly
+  const finalRedirectUrl = new URL(next, redirectBase)
+  
+  // Preserve any other query parameters (like ?email=...)
+  searchParams.forEach((value, key) => {
+    if (key !== 'code' && key !== 'next') {
+      finalRedirectUrl.searchParams.set(key, value)
+    }
+  })
 
-  // Handle PKCE Flow (Email verification, Password reset)
+  const supabase = await createClient()
+  
+  // 1. Server-side logout (clears cookies)
+  await supabase.auth.signOut()
+
   if (code) {
-    const supabase = await createClient()
-    
-    // Explicit sign out on the server to clear old session cookies
-    await supabase.auth.signOut()
-
+    // PKCE Flow
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${redirectBase}${next}${extraQuery}`)
+      return NextResponse.redirect(finalRedirectUrl.toString())
     }
     console.error('Auth callback exchange error:', error)
   }
 
-  // Handle Invitation/Hash Flow
-  // We return a page that clears local storage and then redirects with the hash.
-  // This is better than a simple redirect because it cleans up the browser state.
+  // 2. Client-side aggressive logout + hash detection
+  // This is needed for invitations because they use hashes (#access_token)
+  // which the server cannot see. We must clear client storage manually.
   return new NextResponse(
     `<html>
       <head>
@@ -43,12 +48,12 @@ export async function GET(request: Request) {
             sessionStorage.clear();
             
             const hash = window.location.hash;
-            const fullNext = '${redirectBase}${next}${extraQuery}' + hash;
+            const finalDestination = "${finalRedirectUrl.toString()}" + hash;
             
-            if (hash || '${code}' === 'null') {
-              window.location.replace(fullNext);
+            if (hash || "${code}" === "null") {
+              window.location.replace(finalDestination);
             } else {
-              window.location.replace('${redirectBase}/auth/auth-code-error');
+              window.location.replace("${redirectBase}/auth/auth-code-error");
             }
           })();
         </script>
